@@ -13,9 +13,9 @@ and the surrounding world to find five objects. Because you are a ghost you cann
 <ul>
 <li> UP: colon/semi-colon key</li>
 <li> DOWN: > / period key </li>
-<li> Forward: up arrow</li>
-<li> Backward: down arrow</li>
-<li> Rotate Right: right arrow</li>
-<li> Rotate Left: left arrow</li>
+<li> FORWARD: up arrow</li>
+<li> BACKWARD: down arrow</li>
+<li> ROTATE RIGHT: right arrow</li>
+<li> ROTATE LEFT: left arrow</li>
 </ul>
 </p>
