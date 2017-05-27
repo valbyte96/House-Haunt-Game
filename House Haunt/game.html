@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8"/>
+<title>House Haunt Game</title>
+<script src="three.min.js"></script>
+<script src="KeyboardState.js"></script>
+<script>
+    var scene, camera, renderer; // Three.js rendering basics.
+    var canvas; // The canvas on which the image is rendered.
+    var keyboard = new KeyboardState();
+    var theta; //keeps track of rotation of camera
+    var dx; //change in x
+    var dz; //change in y
+    var view; //container for ghost and camera
+    var counter; //counter for ghost oscillation
+    var ghostBox; //container for ghost
+    var globalCup; //container for cup
+    var globalLantern; //container for lantern
+    var globalBear; //container for bear
+    var globalHeart; //container for heart
+    var globalOrb; //container for first orb
+    var globalBox; //container for globalCup, globalHeart, etc.
+    var sceneOrb; //container for second orb
+    var background; //background color
+
+
+//    document.write("Welcome to the Dream Kingdom. Find your greatest memories and then your soul.");
+
+    //creates scene
+    function createWorld() {
+        background = 0xFF9999;
+        renderer.setClearColor(background);
+        scene = new THREE.Scene(); // Create a new scene which we can add objects to.
+
+        // create a camera, sitting on the positive z-axis.  The camera is not part of the scene.
+        camera = new THREE.PerspectiveCamera(70, canvas.width/canvas.height, 1, 1000);
+        view = new THREE.Object3D(); //create container for camera and ghost
+        view.add(camera); //add camera
+
+
+         // a light to shine in the direction the camera faces
+         var viewpointLight = new THREE.DirectionalLight( 0xffffff, 0.8 );
+         viewpointLight.position.set(0,0,1);  // shines down the z-axis
+         scene.add(viewpointLight);
+
+        //light to follow ghost
+        ghostLight = new THREE.PointLight("white", 1, 10); // color, intensity, and distance
+        ghostLight.position.set( 0, 1, -5 );
+        view.add(ghostLight);
+
+        //light for house
+        pointLight = new THREE.PointLight("white", 1, 300); // color, intensity, and distance
+        pointLight.position.set( 0, 30, 0 );
+        scene.add(pointLight);
+
+        //ghost material
+      var g_material = new THREE.MeshPhongMaterial( { color: "white", transparent: true} );
+      ghostBox = new THREE.Object3D(); //container for ghost
+      //load in blender object
+        var loader = new THREE.JSONLoader();
+        loader.load('ghost.json', function(geometry) {
+            ghost = new THREE.Mesh(geometry, g_material);
+            ghost.position.z = -8;
+            ghostBox.add(ghost);
+            view.add(ghostBox);
+        });
+        view.position.z=60;
+        view.position.y=3;
+        scene.add(view);
+
+        //initialize dx, dz, and theta values
+        dx=0;
+        dz=-.8;
+        theta = Math.PI/2;
+
+        //create house and objects
+        house();
+        createObjects();
+        createSpecialObj();
+
+    }
+
+    //function creates the spinning objects at the beginning of the code
+    function createSpecialObj(){
+      globalBox = new THREE.Object3D();
+
+
+        //creates and positions bear
+      var b_material = new THREE.MeshPhongMaterial( { color: "brown"} );
+        globalBear = new THREE.Object3D();
+        var loader = new THREE.JSONLoader();
+        loader.load('bear.json', function(geometry) {
+            bear = new THREE.Mesh(geometry, b_material);
+             bear.scale.x = .3;
+             bear.scale.y = .3;
+             bear.scale.z = .3;
+             globalBear.add(bear);
+        });
+        globalBear.position.x+=-1.5;
+        globalBox.add(globalBear);
+
+        //creates and positions lantern
+        var l_material = new THREE.MeshPhongMaterial( { color: "yellow"} );
+        globalLantern = new THREE.Object3D();
+          var loader = new THREE.JSONLoader();
+          loader.load('lantern.json', function(geometry) {
+              lantern = new THREE.Mesh(geometry, l_material);
+
+              lantern.scale.x = .15;
+              lantern.scale.y = .15;
+              lantern.scale.z = .15;
+              globalLantern.add(lantern);
+          });
+          globalLantern.position.x += 1.5;
+          globalBox.add(globalLantern);
+
+          //creates and positions heart
+          var h_material = new THREE.MeshPhongMaterial( { color: "red"} );
+          globalHeart = new THREE.Object3D();
+            var loader = new THREE.JSONLoader();
+            loader.load('heart1.json', function(geometry) {
+                heart = new THREE.Mesh(geometry, h_material);
+                heart.scale.x = .1;
+                heart.scale.y = .1;
+                heart.scale.z = .1;
+                globalHeart.add(heart);
+            });
+            globalHeart.position.y += 1.5;
+            globalBox.add(globalHeart);
+
+            //creates and positions cup
+            var c_material = new THREE.MeshPhongMaterial( { color: "white"} );
+            globalCup = new THREE.Object3D();
+              var loader = new THREE.JSONLoader();
+              loader.load('cup.json', function(geometry) {
+                  cup = new THREE.Mesh(geometry, c_material);
+                   cup.scale.x = .1;
+                   cup.scale.y = .1;
+                   cup.scale.z = .1;
+                  globalCup.add(cup);
+
+              });
+              globalCup.position.y += -1.5;
+              globalBox.add(globalCup);
+
+
+
+                    //creates and positions orb
+              globalOrb = new THREE.Object3D();
+              var gl_material = new THREE.MeshPhongMaterial( { color: 0xFFFFCC} );
+              var loader = new THREE.JSONLoader();
+              loader.load('orb.json', function(geometry) {
+                      orb = new THREE.Mesh(geometry, gl_material);
+                      orb.scale.x = .4;
+                      orb.scale.y = .4;
+                      orb.scale.z = .4;
+                      globalOrb.add(orb);
+                      });
+                      globalBox.add(globalOrb);
+
+                      //position global box and add to scene
+                      globalBox.position.z+=50;
+                      globalBox.position.y+=7;
+                      scene.add(globalBox);
+
+
+    }
+
+    //creates regular objects
+    function createObjects(){
+      createWindow(7,3,19.9,1.57);
+      createWindow(12,3,19.9,1.57);
+      createWindow(-8,3,19.9,1.57);
+      createWindow(-13,3,19.9,1.57);
+      createWindow(7,12,19.9,1.57);
+      createWindow(12,12,19.9,1.57);
+      createWindow(-8,12,19.9,1.57);
+      createWindow(-13,12,19.9,1.57);
+      diningSet();
+      createTree(10,10.8,17,1);
+      createTree(14,10.8,14,1.2);
+      createTree(14,10.8,17,1.1);
+      createTree(17,10.9,10,1.5);
+      createTree(14,10.8,7,1.3);
+      createTree(17,10.8,3,1.4);
+      createTent(10,10,12);
+      createCouch(10,0.33,-18,-1.57);
+      createLamp(4.5,0.33,-17);
+      createBoat(-10,10.5,-10,-1.57-3.14);
+      createHeart(-10,14,-8.5,0);
+      createLantern(-14,11.5,10,1.57);
+      createCrib(15,12.5,-16,0);
+      createBear(4,10.5,-16,3.14);
+      createLamp(18,10.33,-2);
+
+      createCup(-8.7,3.7,3,0);
+      createCoffin(0,-15,0,-1.57);
+      createOrb(0,-10,0);
+    }
+
+    //function creates a boat
+    function createBoat(x,y,z,thet){
+      var c_material = new THREE.MeshPhongMaterial( { color: 0xCC6633, transparent: true} );
+        var loader = new THREE.JSONLoader();
+        loader.load('boat.json', function(geometry) {
+            boat = new THREE.Mesh(geometry, c_material);
+            boat.position.x = x;
+            boat.position.y = y;
+            boat.position.z = z;
+            boat.rotation.y = thet;
+            boat.rotation.z += 3.14;
+            boat.scale.x = .5;
+            boat.scale.y = .5;
+            boat.scale.z = .5;
+            scene.add(boat);
+        });
+    }
+
+    //function creates a couch
+    function createCouch(x,y,z,thet){
+      var c_material = new THREE.MeshPhongMaterial( { color: 0x003300} );
+        var loader = new THREE.JSONLoader();
+        loader.load('couch.json', function(geometry) {
+            couch = new THREE.Mesh(geometry, c_material);
+            couch.position.x = x;
+            couch.position.y = y;
+            couch.position.z = z;
+            couch.rotation.y += thet;
+            scene.add(couch);
+        });
+    }
+
+    //function creates a crib
+    function createCrib(x,y,z,thet){
+      var c_material = new THREE.MeshPhongMaterial( { color: "white"} );
+        var loader = new THREE.JSONLoader();
+        loader.load('crib.json', function(geometry) {
+            crib = new THREE.Mesh(geometry, c_material);
+            crib.position.x = x;
+            crib.position.y = y;
+            crib.position.z = z;
+            crib.rotation.y += thet;
+            crib.scale.x = 1.3;
+            crib.scale.y = 1.3;
+            crib.scale.z = 1.3;
+            scene.add(crib);
+        });
+    }
+
+    //function creates a bear
+    function createBear(x,y,z,thet){
+      var b_material = new THREE.MeshPhongMaterial( { color: "brown"} );
+        var loader = new THREE.JSONLoader();
+        loader.load('bear.json', function(geometry) {
+            bear = new THREE.Mesh(geometry, b_material);
+            bear.position.x = x;
+            bear.position.y = y;
+            bear.position.z = z;
+            bear.rotation.y += thet;
+             bear.scale.x = .3;
+             bear.scale.y = .3;
+             bear.scale.z = .3;
+            scene.add(bear);
+        });
+    }
+
+    //function creates a coffin
+    function createCoffin(x,y,z,thet){
+      var b_material = new THREE.MeshPhongMaterial( { color:0xCC6633} );
+        var loader = new THREE.JSONLoader();
+        loader.load('coffin.json', function(geometry) {
+            coffin = new THREE.Mesh(geometry, b_material);
+            coffin.position.x = x;
+            coffin.position.y = y;
+            coffin.position.z = z;
+            coffin.rotation.y += thet;
+            coffin.scale.x = 1.3;
+            coffin.scale.y = 1.3;
+            coffin.scale.z = 1.3;
+            scene.add(coffin);
+        });
+    }
+
+    //function creates a cup
+    function createCup(x,y,z,thet){
+      var c_material = new THREE.MeshPhongMaterial( { color: "white"} );
+        var loader = new THREE.JSONLoader();
+        loader.load('cup.json', function(geometry) {
+            cup = new THREE.Mesh(geometry, c_material);
+            cup.position.x = x;
+            cup.position.y = y;
+            cup.position.z = z;
+            cup.rotation.y += thet;
+             cup.scale.x = .1;
+             cup.scale.y = .1;
+             cup.scale.z = .1;
+            scene.add(cup);
+        });
+    }
+
+    //function creates a heart
+    function createHeart(x,y,z,thet){
+      var h_material = new THREE.MeshPhongMaterial( { color: "red"} );
+        var loader = new THREE.JSONLoader();
+        loader.load('heart1.json', function(geometry) {
+            heart = new THREE.Mesh(geometry, h_material);
+            heart.position.x = x;
+            heart.position.y = y;
+            heart.position.z = z;
+            heart.rotation.y += thet;
+            heart.scale.x = .1;
+            heart.scale.y = .1;
+            heart.scale.z = .1;
+            scene.add(heart);
+        });
+    }
+
+    //function creates a lantern
+    function createLantern(x,y,z,thet){
+      var l_material = new THREE.MeshPhongMaterial( { color: "yellow"} );
+        var loader = new THREE.JSONLoader();
+        loader.load('lantern.json', function(geometry) {
+            lantern = new THREE.Mesh(geometry, l_material);
+            lantern.position.x = x;
+            lantern.position.y = y;
+            lantern.position.z = z;
+            lantern.rotation.y += thet;
+            lantern.scale.x = .3;
+            lantern.scale.y = .3;
+            lantern.scale.z = .3;
+            scene.add(lantern);
+        });
+    }
+    //function creates an orb
+    function createOrb(x,y,z){
+      sceneOrb = new THREE.Object3D(); //container for orb
+      var gl_material = new THREE.MeshPhongMaterial( { color: 0xFFFFCC} );
+      var loader = new THREE.JSONLoader();
+      loader.load('orb.json', function(geometry) {
+            orb = new THREE.Mesh(geometry, gl_material);
+             orb.scale.x = .7;
+             orb.scale.y = .7;
+             orb.scale.z = .7;
+             sceneOrb.add(orb); //add to container
+             sceneOrb.position.x = x; //position container
+             sceneOrb.position.y = y;
+             sceneOrb.position.z = z;
+             scene.add(sceneOrb); //add to scene
+        });
+    }
+
+    function createLamp(x,y,z){
+      var l_material = new THREE.MeshPhongMaterial( { color: 0xFFFFCC} );
+      var loader = new THREE.JSONLoader();
+      loader.load('lamp.json', function(geometry) {
+            lamp = new THREE.Mesh(geometry, l_material);
+            //  orb.scale.x = .7;
+            //  orb.scale.y = .7;
+            //  orb.scale.z = .7;
+             lamp.position.x = x; //position container
+             lamp.position.y = y;
+             lamp.position.z = z;
+             scene.add(lamp); //add to scene
+        });
+    }
+
+
+
+    //function creates a tree
+    function createTree(x,y,z,scale){
+      var win_material = new THREE.MeshPhongMaterial( { color: 0x336600} );
+        var loader = new THREE.JSONLoader();
+        loader.load('tree.json', function(geometry) {
+            tree = new THREE.Mesh(geometry, win_material);
+            tree.position.x = x;
+            tree.position.y = y;
+            tree.position.z = z;
+            tree.scale.y = scale;
+            scene.add(tree);
+        });
+    }
+
+    //function creates a tent
+    function createTent(x,y,z){
+      var t_material = new THREE.MeshPhongMaterial( { color: 0x996666} );
+      var loader = new THREE.JSONLoader();
+      loader.load('tent2.json', function(geometry) {
+          tent = new THREE.Mesh(geometry, t_material);
+          tent.position.x = x;
+          tent.position.y = y;
+          tent.position.z = z;
+          scene.add(tent);
+      });
+    }
+
+    //function creates a window
+    function createWindow(x,y,z,thet){
+      var cover_Geometry = new THREE.PlaneGeometry( 4.4, 3.9 ); //plane to act as glass
+      var coverText = THREE.ImageUtils.loadTexture( 'glass.png' );
+      coverText.wrapS = THREE.RepeatWrapping;
+      coverText.wrapT = THREE.RepeatWrapping;
+      coverText.repeat.set( 1, 1 ); // twice in u and three times in v
+      var cover_Material = new THREE.MeshBasicMaterial({map: coverText, side: THREE.DoubleSide});
+      var cover = new THREE.Mesh( cover_Geometry, cover_Material );
+      cover.position.x = x;
+      cover.position.y = y+2;
+      cover.position.z = z+.3;
+      cover.rotation.z = thet;
+      scene.add(cover);
+
+      var cover_Material2 = new THREE.MeshBasicMaterial({color: background, side: THREE.DoubleSide});
+      var cover2 = new THREE.Mesh( cover_Geometry, cover_Material2 );
+      cover2.position.x = x;
+      cover2.position.y = y+2;
+      cover2.position.z = z-.01;
+      cover2.rotation.z = thet;
+      scene.add(cover2);
+      var win_material = new THREE.MeshPhongMaterial( { color: "white"} );
+        var loader = new THREE.JSONLoader();
+        loader.load('window.json', function(geometry) {
+            window1 = new THREE.Mesh(geometry, win_material);
+            window1.position.x = x;
+            window1.position.y = y;
+            window1.position.z = z;
+            window1.rotation.y = thet;
+            window1.scale.x =.4;
+            window1.scale.y =.7;
+            window1.scale.z =.7;
+            scene.add(window1);
+        });
+
+    }
+
+    //creates dining set
+    function diningSet(){
+      //table
+      var t_material = new THREE.MeshPhongMaterial( { color: 0xCC6633} );
+        var loader = new THREE.JSONLoader();
+        loader.load('table.json', function(geometry) {
+            table = new THREE.Mesh(geometry, t_material);
+             table.position.y +=3.33;
+             table.position.x = -10;
+             scene.add(table);
+        });
+        //chairs
+        var loader = new THREE.JSONLoader();
+        loader.load('chair.json', function(geometry) {
+            chair1 = new THREE.Mesh(geometry, t_material);
+            chair1.position.y +=2.3;
+            chair1.position.x =-8;
+            chair1.position.z +=-1.5;
+            chair2 = new THREE.Mesh(geometry, t_material);
+            chair2.position.y +=2.3;
+            chair2.position.x =-8;
+            chair2.position.z +=1.5;
+            chair3 = new THREE.Mesh(geometry, t_material);
+            chair3.position.y +=2.3;
+            chair3.position.x =-12;
+            chair3.position.z +=1.5;
+            chair3.rotation.y +=3.14;
+            chair4 = new THREE.Mesh(geometry, t_material);
+            chair4.position.y +=2.3;
+            chair4.position.x =-12;
+            chair4.position.z +=-1.5;
+            chair4.rotation.y +=3.14;
+            scene.add(chair1);
+            scene.add(chair2);
+            scene.add(chair3);
+            scene.add(chair4);
+        });
+    }
+
+    function house(){
+      //ROOF
+      var d_material = new THREE.MeshPhongMaterial( { color: 0xCC6633} );
+      var loader = new THREE.JSONLoader();
+      loader.load('roof2.json', function(geometry) {
+          roof = new THREE.Mesh(geometry, d_material);
+          roof.position.y = 20;
+          roof.rotation.y += 1.57;
+          roof.scale.x = 3.7;
+          roof.scale.y = 2;
+          roof.scale.z = 3.7;
+          scene.add(roof);
+      });
+      //DOOR
+      var loader = new THREE.JSONLoader();
+      loader.load('door.json', function(geometry) {
+          door = new THREE.Mesh(geometry, d_material);
+          door.position.z = 18.35;
+          door.position.y += 2;
+          door.scale.z+=1;
+          scene.add(door);
+      });
+
+
+      /**OUTDOORS**/
+      var grassTexture = THREE.ImageUtils.loadTexture( 'grass.jpg' );
+      grassTexture.wrapS = THREE.RepeatWrapping;
+      grassTexture.wrapT = THREE.RepeatWrapping;
+      grassTexture.repeat.set( 13, 13 ); // twice in u and three times in v
+      var lawn_geometry = new THREE.PlaneGeometry( 200, 200 );
+      var lawn_Material = new THREE.MeshBasicMaterial({map: grassTexture, side: THREE.DoubleSide});
+      var lawn1 = new THREE.Mesh( lawn_geometry, lawn_Material );
+      lawn1.rotation.x += 1.57;
+      lawn1.position.y +=-.1;
+      scene.add( lawn1 );
+
+    //OUTDOOR WALLS
+    var brickTexture = THREE.ImageUtils.loadTexture( 'brick.jpg' );
+    brickTexture.wrapS = THREE.RepeatWrapping;
+    brickTexture.wrapT = THREE.RepeatWrapping;
+    brickTexture.repeat.set( 7, 3 ); // twice in u and three times in v
+    var oDW_geometry = new THREE.PlaneGeometry( 40.25, 10 );
+    var oDW_Material = new THREE.MeshBasicMaterial({map: brickTexture, side: THREE.DoubleSide});
+    var oDW_geometry1 = new THREE.PlaneGeometry( 40, 3 );
+
+    //front outdoor wall floor 1
+    var oDWall1 = new THREE.Mesh( oDW_geometry, oDW_Material );
+    oDWall1.position.y += 5;
+    oDWall1.position.z = 20.10;
+    scene.add( oDWall1 );
+    //back outdoor wall floor 1
+    var oDWall2 = new THREE.Mesh( oDW_geometry, oDW_Material );
+    oDWall2.position.y += 5;
+    oDWall2.position.z = -20.1;
+    scene.add( oDWall2 );
+    //front outdoor wall floor 2
+    var oDWall21 = new THREE.Mesh( oDW_geometry, oDW_Material );
+    oDWall21.position.y += 15;
+    oDWall21.position.z = 20.10;
+    scene.add( oDWall21 );
+    //back outdoor wall floor 2
+    var oDWall22 = new THREE.Mesh( oDW_geometry, oDW_Material );
+    oDWall22.position.y += 15;
+    oDWall22.position.z = -20.1;
+    scene.add( oDWall22 );
+    //left outdoor wall floor 1
+    var oDWall3 = new THREE.Mesh( oDW_geometry, oDW_Material );
+    oDWall3.rotation.y += 1.57;
+    oDWall3.position.y += 5;
+    oDWall3.position.x = -20.10;
+    scene.add( oDWall3 );
+    //left outdoor wall floor 2
+    var oDWall31 = new THREE.Mesh( oDW_geometry, oDW_Material );
+    oDWall31.rotation.y += 1.57;
+    oDWall31.position.y += 15;
+    oDWall31.position.x = -20.10;
+    scene.add( oDWall31 );
+    //right outdoor wall floor 1
+    var oDWall4 = new THREE.Mesh( oDW_geometry, oDW_Material );
+    oDWall4.rotation.y += 1.57;
+    oDWall4.position.y += 5;
+    oDWall4.position.x =  20.10;
+    scene.add( oDWall4 );
+    //right outdoor wall floor 2
+    var oDWall41 = new THREE.Mesh( oDW_geometry, oDW_Material );
+    oDWall41.rotation.y += 1.57;
+    oDWall41.position.y += 15;
+    oDWall41.position.x = 20.10;
+    scene.add( oDWall41 );
+
+      //FIRST FLOOR
+      //Living room Floor
+      var floorText = THREE.ImageUtils.loadTexture( 'floor_wood.jpg' );
+      floorText.wrapS = THREE.RepeatWrapping;
+      floorText.wrapT = THREE.RepeatWrapping;
+      floorText.repeat.set( 3, 3 ); // twice in u and three times in v
+       var lRF_geometry = new THREE.PlaneGeometry( 40, 40 );
+       var lRF_Material = new THREE.MeshBasicMaterial({map: floorText, side: THREE.DoubleSide});
+       var lRFloor = new THREE.Mesh( lRF_geometry, lRF_Material );
+       lRFloor.rotation.x += 1.57;
+       scene.add( lRFloor );
+
+       //Walls
+       //back living room wall
+       var lRWTexture = THREE.ImageUtils.loadTexture( 'vintage.jpg' );
+       lRWTexture.wrapS = THREE.RepeatWrapping;
+       lRWTexture.wrapT = THREE.RepeatWrapping;
+       lRWTexture.repeat.set( 8, 4 ); // twice in u and three times in v
+        var lRW_geometry = new THREE.PlaneGeometry( 40, 10 );
+        var lRW_Material = new THREE.MeshBasicMaterial({map: lRWTexture, side: THREE.DoubleSide});
+        var lRWall1 = new THREE.Mesh( lRW_geometry, lRW_Material );
+        lRWall1.position.y += 5;
+        lRWall1.position.z = -20;
+        scene.add( lRWall1 );
+        //left living room wall
+        var lRWall2 = new THREE.Mesh( lRW_geometry, lRW_Material );
+        lRWall2.position.y += 5;
+        lRWall2.rotation.y += 1.57;
+        lRWall2.position.x = -20;
+        scene.add( lRWall2 );
+        //right living room wall
+        var lRWall3 = new THREE.Mesh( lRW_geometry, lRW_Material );
+        lRWall3.position.y += 5;
+        lRWall3.rotation.y += 1.57;
+        lRWall3.position.x = 20;
+        scene.add( lRWall3 );
+        //front living room wall
+        var lRWall4 = new THREE.Mesh( lRW_geometry, lRW_Material );
+        lRWall4.position.y += 5;
+        lRWall4.position.z = 20;
+        scene.add( lRWall4 );
+
+        //ceiling
+        var ceilText = THREE.ImageUtils.loadTexture( 'ceil-tile.jpg' );
+        ceilText.wrapS = THREE.RepeatWrapping;
+        ceilText.wrapT = THREE.RepeatWrapping;
+        ceilText.repeat.set( 13, 13 ); // twice in u and three times in v
+         var sFF_geometry = new THREE.PlaneGeometry( 40, 40 );
+         var sFF_Material = new THREE.MeshBasicMaterial({map: ceilText, side: THREE.DoubleSide});
+         var sFFloor = new THREE.Mesh( sFF_geometry, sFF_Material );
+         sFFloor.rotation.x += 1.57;
+         sFFloor.position.y +=10;
+         scene.add( sFFloor );
+
+         //SECOND FLOOR
+          //ROOM 1
+          var r1_geometry = new THREE.PlaneGeometry( 40, 20 );
+          var forestTexture = THREE.ImageUtils.loadTexture( 'forest_floor.jpg' );
+          forestTexture.wrapS = THREE.RepeatWrapping;
+          forestTexture.wrapT = THREE.RepeatWrapping;
+          forestTexture.repeat.set( 5, 5 ); // twice in u and three times in v
+          forest_Material = new THREE.MeshBasicMaterial({map: forestTexture, side: THREE.DoubleSide});
+          var nightSkyTexture = THREE.ImageUtils.loadTexture( 'night.jpg' );
+          nightSkyTexture.wrapS = THREE.RepeatWrapping;
+          nightSkyTexture.wrapT = THREE.RepeatWrapping;
+          nightSkyTexture.repeat.set( 1, 1 ); // twice in u and three times in v
+          var r1_Material = new THREE.MeshBasicMaterial({map: nightSkyTexture, side: THREE.DoubleSide});
+          var r1Floor = new THREE.Mesh( r1_geometry, forest_Material );
+          r1Floor.rotation.x += 1.57;
+          r1Floor.position.y +=10.1;
+          r1Floor.position.z +=10;
+          scene.add( r1Floor );
+          //front wall
+          var r1Wall1 = new THREE.Mesh( lRW_geometry, r1_Material );
+          r1Wall1.position.y += 15;
+          r1Wall1.position.z = 20;
+          scene.add( r1Wall1 );
+          //back wall
+          var r1Wall2 = new THREE.Mesh( lRW_geometry, r1_Material );
+          r1Wall2.position.y += 15;
+          scene.add( r1Wall2 );
+          //left wall
+          var lRW_geometry2 = new THREE.PlaneGeometry( 20, 10 );
+          var r1Wall3 = new THREE.Mesh( lRW_geometry2, r1_Material );
+          r1Wall3.position.y += 15;
+          r1Wall3.rotation.y += 1.57;
+          r1Wall3.position.z = 10;
+          r1Wall3.position.x = -20;
+          scene.add( r1Wall3 );
+          //right wall
+          var lRW_geometry2 = new THREE.PlaneGeometry( 20, 10 );
+          var r1Wall4 = new THREE.Mesh( lRW_geometry2, r1_Material );
+          r1Wall4.position.y += 15;
+          r1Wall4.rotation.y += 1.57;
+          r1Wall4.position.z = 10;
+          r1Wall4.position.x = 20;
+          scene.add( r1Wall4 );
+         //room 2
+         //front wall
+         var prettyTexture = THREE.ImageUtils.loadTexture( 'pretty.jpg' );
+         prettyTexture.wrapS = THREE.RepeatWrapping;
+         prettyTexture.wrapT = THREE.RepeatWrapping;
+         prettyTexture.repeat.set( 2, 1 ); // twice in u and three times in v
+          var r2_Material = new THREE.MeshBasicMaterial({map: prettyTexture, side: THREE.DoubleSide});
+          var r2Wall1 = new THREE.Mesh( lRW_geometry2, r2_Material );
+          r2Wall1.position.y += 15;
+          r2Wall1.position.z = -.1;
+          r2Wall1.position.x= 10;
+          scene.add( r2Wall1 );
+          //backwall
+          var r2Wall2 = new THREE.Mesh( lRW_geometry2, r2_Material );
+          r2Wall2.position.y += 15;
+          r2Wall2.position.z = -20;
+          r2Wall2.position.x= 10;
+          scene.add( r2Wall2 );
+          //left wall
+          var r2Wall3 = new THREE.Mesh( lRW_geometry2, r2_Material );
+          r2Wall3.position.y += 15;
+          r2Wall3.rotation.y += 1.57;
+          r2Wall3.position.z = -10;
+          r2Wall3.position.x= 20;
+          scene.add( r2Wall3 );
+          //right wall
+          var r2Wall4 = new THREE.Mesh( lRW_geometry2, r2_Material );
+          r2Wall4.position.y += 15;
+          r2Wall4.rotation.y += 1.57;
+          r2Wall4.position.z = -10;
+          scene.add( r2Wall4 );
+          var r23_geometry = new THREE.PlaneGeometry( 20, 20 );
+          //floor
+          var r2Floor = new THREE.Mesh( r23_geometry, lRF_Material );
+          r2Floor.rotation.x += 1.57;
+          r2Floor.position.x += 10;
+          r2Floor.position.y +=10.1;
+          r2Floor.position.z +=-10;
+          scene.add( r2Floor );
+          //ROOM 3
+           var fireWork = THREE.ImageUtils.loadTexture( 'fireworks.jpg' );
+           fireWork.wrapS = THREE.RepeatWrapping;
+           fireWork.wrapT = THREE.RepeatWrapping;
+           fireWork.repeat.set( 2, 1 ); // twice in u and three times in v
+           var fire_Material = new THREE.MeshBasicMaterial({map: fireWork, side: THREE.DoubleSide});
+           var water_text = THREE.ImageUtils.loadTexture( 'water1.jpg' );
+           water_text.wrapS = THREE.RepeatWrapping;
+           water_text.wrapT = THREE.RepeatWrapping;
+           water_text.repeat.set( 2, 1 ); // twice in u and three times in v
+           var water_Material = new THREE.MeshBasicMaterial({map: water_text, side: THREE.DoubleSide});
+          //front wall
+          var r3_Material = new THREE.MeshBasicMaterial({color: "black", side: THREE.DoubleSide});
+          var r3Wall1 = new THREE.Mesh( lRW_geometry2, r3_Material );
+          r3Wall1.position.y += 15;
+          r3Wall1.position.z = -.1;
+          r3Wall1.position.x= -10;
+          scene.add( r3Wall1 );
+          //backWall
+          var r3Wall2 = new THREE.Mesh( lRW_geometry2, fire_Material );
+          r3Wall2.position.y += 15;
+          r3Wall2.position.z = -20;
+          r3Wall2.position.x= -10;
+          scene.add( r3Wall2 );
+          //left wall
+          var r3Wall3 = new THREE.Mesh( lRW_geometry2, r3_Material );
+          r3Wall3.position.y += 15;
+          r3Wall3.rotation.y += 1.57;
+          r3Wall3.position.z = -10;
+          r3Wall3.position.x= -20;
+          scene.add( r3Wall3 );
+          //right wall
+          var r3Wall4 = new THREE.Mesh( lRW_geometry2, r3_Material );
+          r3Wall4.position.y += 15;
+          r3Wall4.rotation.y += 1.57;
+          r3Wall4.position.z = -10;
+          r3Wall4.position.x=-.1;
+          scene.add( r3Wall4 );
+          //floor
+          var r3Floor = new THREE.Mesh( r23_geometry, water_Material );
+          r3Floor.rotation.x += 1.57;
+          r3Floor.position.x += -10;
+          r3Floor.position.y +=10.1;
+          r3Floor.position.z +=-10;
+          scene.add( r3Floor );
+    }
+
+    function float(){
+      if (counter<80){
+        ghostBox.position.y+=.0025;
+      }
+      else if(counter>=80 && counter <160){
+        ghostBox.position.y+=-.0025;
+      }
+      else{
+        counter=0;
+      }
+      counter+=1;
+    }
+
+    // Render the scene. This is called for each frame of the animation.
+    function render() {
+        requestAnimationFrame( render );
+        renderer.render(scene, camera);
+        globalBox.rotation.y+=.005;
+        globalCup.rotation.y+=-.01;
+        globalBear.rotation.y+=-.01;
+        globalHeart.rotation.y+=-.01;
+        globalLantern.rotation.y+=-.01;
+        globalOrb.rotation.y+=.01;
+        sceneOrb.rotation.y+=.05;
+        float();
+        update();
+    }
+
+
+    function update() {
+        keyboard.update();
+        if ( keyboard.pressed("left") ) { //rotates the camera counter clockwise
+          var dTheta = -Math.PI/15;
+          theta+=dTheta;
+          dx= -Math.cos(theta);
+          dz= -Math.sin(theta);
+          view.rotation.y+=-dTheta;
+        }
+        if ( keyboard.pressed("right") ) {//rotates camera clockwise
+          var dTheta = Math.PI/25;
+          theta+=dTheta;
+          dx= -Math.cos(theta);
+          dz= -Math.sin(theta);
+          view.rotation.y+=-dTheta;
+        }
+        if ( keyboard.pressed("down") ) { //move backward
+          view.position.z+=-dz/5;
+          view.position.x+=-dx/5;
+        }
+        if ( keyboard.pressed("up") ) {//move forward
+            view.position.z+=dz/5;
+            view.position.x+=dx/5;
+        }
+        if ( keyboard.pressed(";") ) { //move backward
+          view.position.y+=0.1;
+        }
+        if ( keyboard.pressed(".") ) {//move forward
+            view.position.y+=-0.1;
+        }
+    }
+
+
+    //----------------------------------------------------------------------------------
+
+    // The init() function is called by the onload event when the document has loaded.
+    function init() {
+        try {
+            canvas = document.getElementById("glcanvas");
+            renderer = new THREE.WebGLRenderer( { canvas: canvas, antialias: true} );
+        }
+        catch (e) {
+            document.getElementById("canvas-holder").innerHTML = "<h3><b>WebGL is not available.</b><h3>";
+            return;
+        }
+        // create world and render scene
+        createWorld();
+        render();
+    }
+
+</script>
+
+</head>
+<body onload="init()">
+<div id="canvas-holder">
+    <canvas id="glcanvas" width="600" height="400"></canvas>
+</div>
+</body>
+</html>
